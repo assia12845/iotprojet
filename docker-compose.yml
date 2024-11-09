@@ -8,7 +8,8 @@ volumes:
     prometheus_data: {}
     grafana_data: {}
     mosquitto_data: {}
-    
+    node_red_data: {}
+
 services:
 
   mosquitto-broker:
@@ -17,6 +18,7 @@ services:
     volumes:
       - ./prometheus/:/etc/prometheus/
       - mosquitto_data:/var/lib/mosquitto
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf 
     restart: unless-stopped
     ports:
       - "1883:1883"
@@ -30,11 +32,13 @@ services:
   mosquitto-exporter:
     image: alessandrovito/mosquitto-exporter-docker:1.0
     container_name: mosquitto-exporter
-    #entrypoint: /run.sh
     environment:
-      - MOSQUITTO_USER=${MS_USER:-mosquittouser}
-      - MOSQUITTO_PASSWORD=${MS_PASSWORD:-mosquittopw}
-      - MOSQUITTO_HOSTNAME=${MS_HOSTNAME:-mosquitto}
+      - MOSQUITTO_USER=mosquitto
+      - MOSQUITTO_PASSWORD=password
+      - MOSQUITTO_HOSTNAME=mosquitto
+      - MOSQUITTO_PORT=1883  # Explicitly set the port
+      - MOSQUITTO_EXPORTER_METRICS_PATH=/metrics  # Ensure the correct metrics path
+
     restart: unless-stopped
     ports:
       - "9180:9180"
@@ -44,7 +48,7 @@ services:
       org.label-schema.group: "monitoring"
 
   prometheus:
-    image: prom/prometheus:v2.2.0-rc.0
+    image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -65,8 +69,7 @@ services:
       org.label-schema.group: "monitoring"
   
   grafana:
-    #image: grafana/grafana:5.0.1
-    image: grafana/grafana:4.6.3
+    image: grafana/grafana:latest
     container_name: grafana
     volumes:
       - grafana_data:/var/lib/grafana
@@ -85,5 +88,20 @@ services:
       - monitor-net
     labels:
       org.label-schema.group: "monitoring"
-
-
+  
+  node-red:
+    image: nodered/node-red:latest
+    container_name: node-red
+    volumes:
+      - node_red_data:/data
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=256
+    ports:
+      - "1880:1880"
+    networks:
+      - monitor-net
+    depends_on:
+      - mosquitto-broker
+    labels:
+      org.label-schema.group: "monitoring"
+    restart: unless-stopped

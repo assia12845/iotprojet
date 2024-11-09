@@ -10,5 +10,11 @@ scrape_configs:
     static_configs:
       - targets: ['mosquitto-exporter:9180']
 
+  - job_name: 'node-red-metrics'
+    static_configs:
+      - targets: ['node-red:1880']  # Replace <node-red-ip> with your Node-RED IP address
 
-
+      
+  - job_name: 'broker-metrics'
+    static_configs:
+      - targets: ['mosquitto:1883']  # Replace <node-red-ip> with your Node-RED IP address
